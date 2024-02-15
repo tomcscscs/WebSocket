@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title th:text="|오픈채팅 - ${room.title}|">오픈채팅</title>
+<link
+	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+	rel="stylesheet" />
+<link rel="stylesheet"
+	href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+	<div class="container"
+		style="position: relative; height: 100vh; max-height: 100vh">
+		<div class="sticky-top" id="room" th:data-room-id="${room.id}">
+			<div class="py-2">
+				<h2>오픈채팅</h2>
+			</div>
+			<div>
+				<h5>
+					<i class="bi bi-chat"></i> <span th:text="${room.title}"></span>
+				</h5>
+				<p></p>
+			</div>
+		</div>
+		<div id="messages">
+			<div th:each="msg : ${messages}" id="${msg.id}">
+				<span th:text="|(${#temporals.format(msg.createdAt, 'HH:mm:ss')})|"
+					class="text-secondary"></span> <span th:text="${msg.body}"></span>
+			</div>
+
+		</div>
+
+		<div style="position: absolute; left: 0; bottom: 0; width: 100%;"
+			class="p-2">
+			<input type="text" id="msg" class="form-control"
+				th:data-room-id="${room.id}" />
+		</div>
+
+	</div>
+	<script
+		src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+	<script
+		src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@5.0.0/bundles/stomp.umd.min.js"></script>
+	<script>
+		document.querySelector("#msg").addEventListener("change", function(e) {
+			if (!e.target.value.trim())
+				return;
+			const roomId = e.target.dataset.roomId;
+			
+			fetch("/chat/api/" + roomId, {
+				method : "post",
+				headers : {
+					"Content-type" : "application/x-www-form-urlencoded"
+				},
+				body : "body=" + e.target.value
+			}).then(function(response) {
+				return response.json();
+			}).then(function(obj) {
+				if (obj.result)
+					e.target.value = "";
+			});
+		});
+	</script>
+	<!--  -->
+	<script>
+		const client = new StompJs.Client({
+			brokerURL : "ws://" + location.host + "/message",
+			onConnect : function() {
+				client.subscribe("/common", function(message) {
+					console.log(message);
+					console.log("received message from common channel : " + message.body);
+				});
+				client.subscribe("/chat", function(message) {
+					console.log("received message from chat channel : " + message.body);
+					var obj = JSON.parse(message.body);
+				});
+			}
+		});
+		client.activate();
+	</script>
+</body>
+</html>
